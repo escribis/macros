@@ -1,0 +1,15 @@
+<?xml version="1.0" ?><catalog>
+<script name="GetNewIdentifier" path="GetNewIdentifier.py" icon-path="" show-menu="false" show-toolbar="true">
+<description></description>
+</script>
+<script name="AdvancedSearch" path="AdvancedSearch.py" icon-path="" show-menu="false" show-toolbar="true">
+<description></description>
+</script>
+<script name="GenerateProfile" path="generateprofile_modelio3.py" icon-path="" show-menu="false" show-toolbar="true">
+<description>This script generates a part of the 'module.xml' file used for the module development.
+It displays the complete description of a profile.
+It is applicable on ModuleComponents and Profiles</description>
+<metaclass name="ModuleComponent"></metaclass>
+<metaclass name="Profile"></metaclass>
+</script>
+</catalog>
