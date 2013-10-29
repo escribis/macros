@@ -140,8 +140,6 @@ def getNameFromType(t):
   if t is java.lang.String:
     name = "string"
   elif isEnumeration(t):
-    print t, type(t)
-    print t.getCanonicalName()
     # enumeration type are NOT interfaces in modelio api and are named
     # like com.modeliosoft.modelio.api.model.uml.statik.ObVisibilityModeEnum
     # We remove the path, leaving ObVisibilityModeEnum
@@ -287,16 +285,17 @@ def _getJavaMethods(javaclass,inherited=False,regexp=None,argTypes=None,special=
   if not special:
     javaMethods = reject(lambda m:_isSpecialFeature(m.getName()),javaMethods)
   return javaMethods
-  
+
+import types
+from java.util import List as JavaUtilList
+from org.eclipse.emf.common.util import EList
 if orgVersion:
   from org.modelio.vcore.smkernel import SmList as ModelioList
 else:
   from com.modeliosoft.modelio.api.utils import ObList as ModelioList
-from java.util import List as JavaUtilList
-import types
-LIST_TYPES = [ModelioList,JavaUtilList,types.ListType]  
 def isCollectionType(x):
   return x in LIST_TYPES  
+LIST_TYPES = [ModelioList,JavaUtilList,types.ListType, EList]    
 
 def _getJavaMethodInfo(javaMethod):
   classe = javaMethod.getDeclaringClass()
@@ -878,8 +877,21 @@ def show(x,html=False):
   else:
     print x
 
-from org.eclipse.swt.graphics import Color
+    
+from org.eclipse.swt.graphics import Color, Image
 from org.eclipse.swt.widgets import Display
+    
+# TODO refactor this code
+# get the current device. Is there a better way to do this?
+if orgVersion:
+  from org.modelio.metamodel.uml.statik import Package
+else:
+  from com.modeliosoft.modelio.metamodel.uml.statik import IPackage as Package
+DEVICE = Display.getCurrent() # Modelio.getInstance().getImageService().getMetaclassImage(Package).getDevice()
+NAVIGATOR_ATOMIC_IMAGE = Image(DEVICE, "C:\\MODELIO3-WORKSPACE\\macros\\lib\\res\\atomic.gif")
+NAVIGATOR_ASSOC1_IMAGE = Image(DEVICE, "C:\\MODELIO3-WORKSPACE\\macros\\lib\\res\\assoc-1.gif") 
+NAVIGATOR_ASSOCN_IMAGE = Image(DEVICE, "C:\\MODELIO3-WORKSPACE\\macros\\lib\\res\\assoc-n.gif") 
+
 def elementTree(x,emptySlots=False):
   def _getChildren(data):
     if isinstance(data,ElementInfo):
@@ -917,8 +929,14 @@ def elementTree(x,emptySlots=False):
   def _getImage(data):
     if isinstance(data,ElementInfo):
       return getMetaclassImage(data.getMetaclass())
-    else:
-      return None
+    elif isinstance(data,MetaFeatureSlot):
+      mv = data.getModelValue()
+      if mv.isElement():
+        return NAVIGATOR_ASSOC1_IMAGE
+      elif mv.isElementList():
+        return NAVIGATOR_ASSOCN_IMAGE
+      else:
+        return NAVIGATOR_ATOMIC_IMAGE
   def _getGrayed(data):
     if isinstance(data,ElementInfo):
       return False
@@ -926,14 +944,23 @@ def elementTree(x,emptySlots=False):
       return True  
   def _getBackground(data):
     if isinstance(data,ElementInfo):
+      return None
       return Color(Display.getCurrent(),240,240,150)
     else:
+      return None
       return Color(Display.getCurrent(),150,240,240)
+  def _getForeground(data):
+    if isinstance(data,ElementInfo):
+      return Color(Display.getCurrent(),0,0,150)
+    else:
+      return Color(Display.getCurrent(),0,150,0)    
   if not isList(x):
     x = [x]
   TreeWindow(map(getElementInfo,x),_getChildren,_isLeaf, \
                  getTextFun=_getText,getImageFun=_getImage, \
-                 getGrayedFun=_getGrayed,getBackgroundFun=_getBackground,
+                 getGrayedFun=_getGrayed, \
+                 getBackgroundFun=_getBackground, \
+                 getForegroundFun=_getForeground,
                  title = "Model/Metamodel CoExplorer")
 
 #----------------------------------------
@@ -944,3 +971,7 @@ def navigateToElement(element):
                   
 
 
+                  
+                  
+                  
+print "module introspection loaded from",__file__

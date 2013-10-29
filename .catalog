@@ -5,6 +5,9 @@
 <script name="AdvancedSearch" path="AdvancedSearch.py" icon-path="" show-menu="false" show-toolbar="true">
 <description></description>
 </script>
+<script name="CoExplorer" path="CoExplorer.py" icon-path="" show-menu="false" show-toolbar="true">
+<description></description>
+</script>
 <script name="GenerateProfile" path="generateprofile_modelio3.py" icon-path="" show-menu="false" show-toolbar="true">
 <description>This script generates a part of the 'module.xml' file used for the module development.
 It displays the complete description of a profile.

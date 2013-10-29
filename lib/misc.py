@@ -196,17 +196,19 @@ class HtmlWindow(object):
   def setURL(self,url):
     self.browser.setUrl(url)
   
-  
+
   
 from org.eclipse.swt import *
 from org.eclipse.swt.layout import FillLayout
 #from org.eclipse.swt.graphics import *
 from org.eclipse.swt.widgets import Tree,TreeItem
 
+
+
 class TreeWindow(object):
   def __init__(self,rootDataObjects,getChildrenFun,isLeafFun,
                 getImageFun=None,getTextFun=None,title="Explorer",
-                getGrayedFun=None,getBackgroundFun=None
+                getGrayedFun=None,getBackgroundFun=None,getForegroundFun=None
               ):
               
     def _addRootDataObjects():
@@ -239,6 +241,10 @@ class TreeWindow(object):
         background = getBackgroundFun(dataObject)
         if background is not None:
           node.setBackground(background)
+      if getForegroundFun is not None:
+        foreground = getForegroundFun(dataObject)
+        if foreground is not None:
+          node.setForeground(foreground)
 
     class ThisTreeExpandListener(Listener):
       def handleEvent(self, event):         
