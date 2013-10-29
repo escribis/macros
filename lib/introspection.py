@@ -877,20 +877,24 @@ def show(x,html=False):
   else:
     print x
 
-    
+import os    
 from org.eclipse.swt.graphics import Color, Image
 from org.eclipse.swt.widgets import Display
-    
-# TODO refactor this code
-# get the current device. Is there a better way to do this?
-if orgVersion:
-  from org.modelio.metamodel.uml.statik import Package
-else:
-  from com.modeliosoft.modelio.metamodel.uml.statik import IPackage as Package
 DEVICE = Display.getCurrent() # Modelio.getInstance().getImageService().getMetaclassImage(Package).getDevice()
-NAVIGATOR_ATOMIC_IMAGE = Image(DEVICE, "C:\\MODELIO3-WORKSPACE\\macros\\lib\\res\\atomic.gif")
-NAVIGATOR_ASSOC1_IMAGE = Image(DEVICE, "C:\\MODELIO3-WORKSPACE\\macros\\lib\\res\\assoc-1.gif") 
-NAVIGATOR_ASSOCN_IMAGE = Image(DEVICE, "C:\\MODELIO3-WORKSPACE\\macros\\lib\\res\\assoc-n.gif") 
+RESOURCE_PATH = os.path.join(os.path.dirname(__file__),'res')
+
+class NavigatorImageProvider(object):
+  def __init__(self,resourcePath):
+    self.imageMap = {}
+    for name in ["atomic","assoc-1","assoc-n"]:
+    # ,"integer","float","long","boolean","enumeration"]
+      self.imageMap[name] = Image(DEVICE,os.path.join(resourcePath,name+".gif"))
+  def getImage(self,name):
+    if name in self.imageMap:
+      return self.imageMap[name]
+    else:
+      return None    
+NAVIGATOR_IMAGE_PROVIDER=NavigatorImageProvider(RESOURCE_PATH)
 
 def elementTree(x,emptySlots=False):
   def _getChildren(data):
@@ -932,23 +936,16 @@ def elementTree(x,emptySlots=False):
     elif isinstance(data,MetaFeatureSlot):
       mv = data.getModelValue()
       if mv.isElement():
-        return NAVIGATOR_ASSOC1_IMAGE
+        return NAVIGATOR_IMAGE_PROVIDER.getImage("assoc-1")
       elif mv.isElementList():
-        return NAVIGATOR_ASSOCN_IMAGE
+        return NAVIGATOR_IMAGE_PROVIDER.getImage("assoc-n")
       else:
-        return NAVIGATOR_ATOMIC_IMAGE
+        return NAVIGATOR_IMAGE_PROVIDER.getImage("atomic")
   def _getGrayed(data):
     if isinstance(data,ElementInfo):
       return False
     else:
       return True  
-  def _getBackground(data):
-    if isinstance(data,ElementInfo):
-      return None
-      return Color(Display.getCurrent(),240,240,150)
-    else:
-      return None
-      return Color(Display.getCurrent(),150,240,240)
   def _getForeground(data):
     if isinstance(data,ElementInfo):
       return Color(Display.getCurrent(),0,0,150)
@@ -959,7 +956,6 @@ def elementTree(x,emptySlots=False):
   TreeWindow(map(getElementInfo,x),_getChildren,_isLeaf, \
                  getTextFun=_getText,getImageFun=_getImage, \
                  getGrayedFun=_getGrayed, \
-                 getBackgroundFun=_getBackground, \
                  getForegroundFun=_getForeground,
                  title = "Model/Metamodel CoExplorer")
 
