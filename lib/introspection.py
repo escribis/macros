@@ -6,6 +6,8 @@
 # Author: jmfavre
 # 
 # History
+#   Version 0.4 - October 29, 2013
+#      - better icons and colors for improved navigation
 #   Version 0.3 - October 28, 2013
 #      - port to Modelio 3 
 #   Version 0.2 - October 25, 2013
@@ -71,9 +73,6 @@ __all__ = [
   
   "show",
   "elementTree",
-  
-  #---- some examples
-  "showUseCasesPerActors"
   
    
  ]
@@ -302,6 +301,8 @@ def _getJavaMethodInfo(javaMethod):
   name = javaMethod.getName()
   parameterTypes = list(javaMethod.getParameterTypes())
   returnType = javaMethod.getGenericReturnType()
+  # check if the return type is a list, 
+  # in which case this is a multivalued association end
   if javaMethod.getReturnType() in LIST_TYPES:
     multiple = True
     if len(returnType.getActualTypeArguments()) != 0:
@@ -649,6 +650,7 @@ class AtomicModelValue(ModelValue):
 class EnumerationLiteralModelValue(AtomicModelValue):
   def __init__(self,literal):     
     self.literal = literal
+  def isEnumerationLiteral(self):     return True
   def getValue(self):                 return self.literal
   def getKind(self):                  return "enumerationLiteral"
   def getText(self):                  return self.literal.toString()
@@ -656,15 +658,15 @@ class EnumerationLiteralModelValue(AtomicModelValue):
 
 class ScalarModelValue(AtomicModelValue):
   def __init__(self,scalar):          self.scalar = scalar
+  def getValue(self):                 return self.scalar
   def getKind(self):                  return "scalar"
   def getText(self):                  return unicode(self.scalar)
   def isScalar(self):                 return True
   
 class StringModelValue(ScalarModelValue):
   def __init__(self,string):
-    self.string = string
-  def getValue(self):                 return self.string
-  def getText(self):                  return u'"'+self.string+'"'
+    ScalarModelValue.__init__(self,string)
+  def getText(self):                  return u'"'+self.scalar+'"'
 
   
 
@@ -693,10 +695,10 @@ def getModelValueFromValue(value):
   
 #--------- introspection at the model/metamodel level ----------
 
-if orgVersion:
-  from org.modelio.api.diagram import IDiagramGraphic  
-else:
-  from com.modeliosoft.modelio.api.diagram import IDiagramGraphic
+#if orgVersion:
+#  from org.modelio.api.diagram import IDiagramGraphic  
+#else:
+#  from com.modeliosoft.modelio.api.diagram import IDiagramGraphic
 
 
 
@@ -886,8 +888,10 @@ RESOURCE_PATH = os.path.join(os.path.dirname(__file__),'res')
 class NavigatorImageProvider(object):
   def __init__(self,resourcePath):
     self.imageMap = {}
-    for name in ["atomic","assoc-1","assoc-n"]:
-    # ,"integer","float","long","boolean","enumeration"]
+    for name in ["atomic","assoc-1","assoc-n","integer","int",
+                 "float","long","boolean","bool","string","unicode","enumeration",
+                 "IDiagramNode","IDiagramLink","ILinkPath","IStyleHandle", 
+                 "Rectangle","Dimension","Point"]:
       self.imageMap[name] = Image(DEVICE,os.path.join(resourcePath,name+".gif"))
   def getImage(self,name):
     if name in self.imageMap:
@@ -896,6 +900,13 @@ class NavigatorImageProvider(object):
       return None    
 NAVIGATOR_IMAGE_PROVIDER=NavigatorImageProvider(RESOURCE_PATH)
 
+if orgVersion:
+  from org.modelio.api.diagram import IDiagramNode,IDiagramLink,ILinkPath
+  from org.modelio.api.diagram.style import IStyleHandle
+else:
+  from com.modeliosoft.modelio.api.diagram import IDiagramNode,IDiagramLink,ILinkPath
+  from com.modeliosoft.modelio.api.diagram.style import IStyleHandle
+from org.eclipse.draw2d.geometry import Rectangle, Dimension, Point
 def elementTree(x,emptySlots=False):
   def _getChildren(data):
     if isinstance(data,ElementInfo):
@@ -932,15 +943,36 @@ def elementTree(x,emptySlots=False):
         return "???"+unicode(mv)
   def _getImage(data):
     if isinstance(data,ElementInfo):
-      return getMetaclassImage(data.getMetaclass())
+      metaclass = data.getMetaclass()
+      image = getMetaclassImage(metaclass)
+      if image is None:
+        print data.getMetaclass().getCanonicalName()
+        if issubclass(metaclass,IDiagramNode):
+          return NAVIGATOR_IMAGE_PROVIDER.getImage("IDiagramNode")
+        elif issubclass(metaclass,IDiagramLink):
+          return NAVIGATOR_IMAGE_PROVIDER.getImage("IDiagramLink")
+        elif issubclass(metaclass,ILinkPath):
+          return NAVIGATOR_IMAGE_PROVIDER.getImage("ILinkPath")
+        elif issubclass(metaclass,IStyleHandle):
+          return NAVIGATOR_IMAGE_PROVIDER.getImage("IStyleHandle")
+        elif issubclass(metaclass,Rectangle):
+          return NAVIGATOR_IMAGE_PROVIDER.getImage("Rectangle")
+        elif issubclass(metaclass,Dimension):
+          return NAVIGATOR_IMAGE_PROVIDER.getImage("Dimension")
+        elif issubclass(metaclass,Point):
+          return NAVIGATOR_IMAGE_PROVIDER.getImage("Point")
+      return image
     elif isinstance(data,MetaFeatureSlot):
       mv = data.getModelValue()
       if mv.isElement():
         return NAVIGATOR_IMAGE_PROVIDER.getImage("assoc-1")
       elif mv.isElementList():
         return NAVIGATOR_IMAGE_PROVIDER.getImage("assoc-n")
-      else:
-        return NAVIGATOR_IMAGE_PROVIDER.getImage("atomic")
+      elif mv.isScalar():
+        typename = getNameFromType(type(mv.getValue()))
+        return NAVIGATOR_IMAGE_PROVIDER.getImage(typename)
+      elif mv.isEnumerationLiteral():
+        return NAVIGATOR_IMAGE_PROVIDER.getImage("enumeration")
   def _getGrayed(data):
     if isinstance(data,ElementInfo):
       return False
@@ -949,8 +981,12 @@ def elementTree(x,emptySlots=False):
   def _getForeground(data):
     if isinstance(data,ElementInfo):
       return Color(Display.getCurrent(),0,0,150)
-    else:
-      return Color(Display.getCurrent(),0,150,0)    
+    elif isinstance(data,MetaFeatureSlot):
+      mv = data.getModelValue()
+      if mv.isElement() or mv.isElementList(): 
+        return Color(Display.getCurrent(),0,100,0)
+      else:
+        return Color(Display.getCurrent(),0,180,0)      
   if not isList(x):
     x = [x]
   TreeWindow(map(getElementInfo,x),_getChildren,_isLeaf, \
