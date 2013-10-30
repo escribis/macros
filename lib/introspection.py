@@ -6,6 +6,9 @@
 # Author: jmfavre
 # 
 # History
+#   Version 0.5 - October 30, 2013
+#      - icons for Modelio 3' metamodel elements
+#      - refactoring
 #   Version 0.4 - October 29, 2013
 #      - better icons and colors for improved navigation
 #   Version 0.3 - October 28, 2013
@@ -90,13 +93,7 @@ from misc import HtmlWindow,TreeWindow,ImageProvider
 from misc import getWebPage
 
 
-SPECIAL_FEATURES = [ 
-  "toString","hashCode","compareTo","wait",
-  "accept",
-  "notify","notifyAll",
-  "class","getClass",
-  "delete","getmodifDate","isValid",
-  "hid","getHid","lid","getLid","getMetaclassId","sessionId","getSessionId","getElementStatus"]
+
 
 MODELIO = Modelio.getInstance()
 METAMODEL_SERVICE = MODELIO.getMetamodelService()
@@ -125,10 +122,7 @@ def getNameFromMetaclass(metaclass):
   if issubclass(metaclass,ModelioElement):
     name = METAMODEL_SERVICE.getMetaclassName(metaclass)
   else:
-    try:
-      name = unicode(metaclass.getCanonicalName())
-    except:
-      name = metaclass.toString()
+    name = unicode(metaclass.getCanonicalName())
   return unicode(name)
 
 def isJavaClass(x):
@@ -349,14 +343,21 @@ def getSuperMetaclasses(metaclass,inclusive=True):
   return metaClasses if inclusive else metaClasses[1:]
 
 
-
-def _isSpecialFeature(name): return name in SPECIAL_FEATURES
+# SPECIAL_FEATURES = [ 
+#  "toString","hashCode","compareTo","wait",
+#  "accept",
+#  "notify","notifyAll",
+#  "class","getClass",
+#  "delete","getmodifDate","isValid",
+#  "hid","getHid","lid","getLid","getMetaclassId","sessionId","getSessionId","getElementStatus"]
+# def _isSpecialFeature(name): return name in SPECIAL_FEATURES
 
 import java.lang.reflect.Member
 import re
-def _getJavaMethods(javaclass,inherited=False,regexp=None,argTypes=None,special=False,natives=False):
+def _getJavaMethods(javaclass,inherited=False,regexp=None,argTypes=None,methodFilterFun=None,natives=False):
   """ returns java methods from a metaclass
       regexp : None or a regular expression to filter method names (e.g. "^get|is")
+      methodFilterFun : None or a predicate on a java.lang.reflect.Method object that will be used to filter methods
   """   
   javaMethods = javaclass.getMethods() if inherited else javaclass.getDeclaredMethods()
   if not natives:
@@ -367,8 +368,8 @@ def _getJavaMethods(javaclass,inherited=False,regexp=None,argTypes=None,special=
     javaMethods = filter(lambda m:re.match(regexp,m.getName()), javaMethods) 
   if argTypes is not None:
     javaMethods = filter(lambda m:list(m.getParameterTypes())==list(argTypes), javaMethods)
-  if not special:
-    javaMethods = reject(lambda m:_isSpecialFeature(m.getName()),javaMethods)
+  if methodFilterFun is not None:
+    javaMethods = filter(methodFilterFun,javaMethods)
   return javaMethods
 
 import types
@@ -475,13 +476,13 @@ FUN_META_FEATURES = {
       IDiagramDG, \
       False ) ] }
        
-def getMetaFeatures(metaclass,inherited=True,groupBySuper=False,additionalFun=[]):
+def getMetaFeatures(metaclass,inherited=True,groupBySuper=False,methodFilterFun=None,additionalFun=[]):
   """ return the meta features of a metaclass, that is MetaFeature created
       for methods getXXX() and isXXX() with no arguments
   """
+  javaMethods = _getJavaMethods(metaclass,inherited=inherited,regexp='^get|is|toString',argTypes=[],methodFilterFun=methodFilterFun)
   # get the signaturex 
-  javaMethodInfos = map(_getJavaMethodInfo,
-                        _getJavaMethods(metaclass,inherited=inherited,regexp='^(get|is)',argTypes=[]))
+  javaMethodInfos = map(_getJavaMethodInfo,javaMethods )
   # in method info the parameters are indicated. Here we skip this as we know that
   # the methods do not have parameters.
   metafeatures = map( _getMetaFeatureFromJavaMethodInfo,javaMethodInfos)
