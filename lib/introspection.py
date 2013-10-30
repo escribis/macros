@@ -65,7 +65,7 @@ __all__ = [
   "getElementParents",
   "getElementPath",
   
-  "ImageProvider",
+  "getDiagramContainingElement",
   "ClassImageProvider",
   "NAVIGATOR_IMAGE_PROVIDER", 
   
@@ -337,7 +337,6 @@ def getSuperMetaclasses(metaclass,inclusive=True):
       This function is inte
   """
   metaclasses = [metaclass] if inclusive else []
-  print metaclass
   if issubclass(metaclass,ModelioElement):
     # for modelio classes, the algorithm below use the fact that until Element
     # there is only one interface 
@@ -489,21 +488,48 @@ def _getMetaFeatureFromJavaMethodInfo(javaMethodInfo):
   (classe,name,parameters,returntype,multiplicty) = javaMethodInfo
   return GetterMetaFeature(classe,name,returntype,multiplicty)
 
+  
+  
+  
+
 if orgVersion:
   from org.modelio.api.diagram.dg import IDiagramDG
   from org.modelio.metamodel.diagrams import AbstractDiagram as ModelioAbstractDiagram
 else:
   from com.modeliosoft.modelio.api.diagram.dg import IDiagramDG
   from com.modeliosoft.modelio.api.model.diagrams import AbstractDiagram as ModelioAbstractDiagram
+
+DIAGRAM_SERVICE = Modelio.getInstance().getDiagramService()
+ALL_DIAGRAMS = Modelio.getInstance().getModelingSession().findByClass(ModelioAbstractDiagram)
+# Should this be computed on demand and refreshed when new diagrams are updated?
+ALL_DIAGRAM_HANDLES = map(DIAGRAM_SERVICE.getDiagramHandle,ALL_DIAGRAMS)
+
+def getDisplayingDiagrams(element):
+  """ Return all diagrams displaying the element in a graphical form
+  """
+  selectedDiagrams = []
+  for diagramHandle in ALL_DIAGRAM_HANDLES:
+    graphicElements = diagramHandle.getDiagramGraphics(element)
+    if len(graphicElements)!=0:
+      selectedDiagrams.append(diagramHandle.getDiagram())
+  return selectedDiagrams
+
   
 VIRTUAL_META_FEATURES = [
-    ( "<<<getDiagramNode>>> (virtual feature)", 
+    ( "<<<getDiagramNode>>> (virtual)", 
       ModelioAbstractDiagram,
-      (lambda d:Modelio.getInstance(). \
-                getDiagramService().getDiagramHandle(d).getDiagramNode()), 
+      (lambda d:DIAGRAM_SERVICE.getDiagramHandle(d).getDiagramNode()), 
       IDiagramDG, 
-      False )
+      False ),
+    ( "<<<getDisplayingDiagrams>>> (virtual)",
+      ModelioElement,
+      getDisplayingDiagrams,
+      ModelioAbstractDiagram,
+      True )
   ]
+  
+  
+
        
 def getMetaFeatures(metaclass,inherited=True,groupBySuper=False,methodFilterFun=None,additionalFun=[]):
   """ return the meta features of a metaclass, that is MetaFeature created

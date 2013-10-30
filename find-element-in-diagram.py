@@ -57,15 +57,16 @@ def getFullName(element):
 
 DIAGRAM_SERVICE = Modelio.getInstance().getDiagramService()
 ALL_DIAGRAMS = Modelio.getInstance().getModelingSession().findByClass(ModelioAbstractDiagram)
+ALL_DIAGRAM_HANDLES = map(DIAGRAM_SERVICE.getDiagramHandle,ALL_DIAGRAMS)
 
-def getDiagramsContainingElement(element):
-  """ Return all diagrams containing the element
+def getDisplayingDiagrams(element):
+  """ Return all diagrams displaying the element in a graphical form
   """
   selectedDiagrams = []
-  for diagram in ALL_DIAGRAMS:
-    graphicElements = DIAGRAM_SERVICE.getDiagramHandle(diagram).getDiagramGraphics(element)
+  for diagramHandle in ALL_DIAGRAM_HANDLES:
+    graphicElements = diagramHandle.getDiagramGraphics(element)
     if len(graphicElements)!=0:
-      selectedDiagrams.append(diagram)
+      selectedDiagrams.append(diagramHandle.getDiagram())
   return selectedDiagrams
 
 def getDiagramSignature(diagram):
@@ -73,7 +74,7 @@ def getDiagramSignature(diagram):
 
   
 for element in selectedElements:
-  diagrams = getDiagramsContainingElement(element)
+  diagrams = getDisplayingDiagrams(element)
   nbDiagrams = len(diagrams)
   if nbDiagrams != 0:
     print '"'+getFullName(element)+'"',"found in",nbDiagrams,"diagram"+("s" if nbDiagrams>1 else "")

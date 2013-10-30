@@ -325,12 +325,9 @@ class TreeWindow(object):
 
 #----- web  ---------------------------------------------------------
 
-try:
-  # FIXME This module cannot be imported with Modelio 3.0 as it produce an error
-  #  can't find encoding 'iso8859_1'
-  import urllib2
-except:
-  pass
+
+from encodings import iso8859_1
+import urllib2
   
 def getWebPage(url):
   """ read the content of the given url and throws an exception in case of error
@@ -340,4 +337,4 @@ def getWebPage(url):
   
 
   
-print "module misc loaded"
+print "module misc loaded from",__file__
