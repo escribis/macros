@@ -1,11 +1,44 @@
+#
 # CoExplorer
 #
-# Launch a model-metamodel co-explorer on the selected elements
+# Model/Metamodel co-explorer for Modelio.
 #
-# Author jmfavre
+# Author: jmfavre
 #
-# Requires misc, introspection
+# Compatibility: Modelio 2.x, Modelio 3.x
 #
+# Purpose:
+#   This macro allows to explore the set of selected elements by navigating at the
+#   same time in the model and the metamodel.
+#   The set of all (non empty) features associated with each element is displayed,
+#   allowing the navigation to continue. Note that the tree is virtually infinite and
+#   that there is currently no indication that an element has been already visited.
+#   The methods followed are those of the form getXXX(), isXXX() and toString() with no
+#   parameters. A few "virtual" methods which do not have direct correspondance in modelio
+#   are also added, in particular to enable navigation to and within diagrams.
+#   The co-explorer allows to navigate at the same time the model
+#   and discover a slice of the metamodel, the slice that is useful for the model at hand.
+#   The explorer not only allow to explore ModelElement, but also other Java entities,
+#   and interestingly enough the DiagramGraphic elements. In modelio graphical entities
+#   are not modeled, but the exploration is made possible.
+#
+# Installation:
+#   This script should be installed as a workspace macro with the following options:
+#      - "Applicable on" : No Selection. The macro is application on any kind of element
+#      - "Show in contextual menu" : YES
+#      - "Show in toolbar" : YES
+#   This script is based on the content of the "lib" directory which should be copied by
+#   hand to the macros directory of the workspace. That is, in the directory where this file
+#   CoExplorer.py is installed.
+#   Ultimately we should have
+#      CoExplorer.py
+#      lib/
+#          introspection.py
+#          misc.py
+#          res/
+#               assoc-1.gif
+#               assoc-n.gif
+#               ... all other images ...
 
 DEVELOPEMENT_MODE = True
 

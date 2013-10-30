@@ -1,14 +1,18 @@
 #
-# CoExplorer
+# introspection
 #
 # Model/Metamodel co-explorer for Modelio.
 #
 # Author: jmfavre
+#
+# Compatibility: Modelio 2.x, Modelio 3.x
+#
 # 
 # History
 #   Version 0.5 - October 30, 2013
 #      - icons for Modelio 3' metamodel elements
 #      - refactoring
+#      - some virtual features added for diagram exploration
 #   Version 0.4 - October 29, 2013
 #      - better icons and colors for improved navigation
 #   Version 0.3 - October 28, 2013
