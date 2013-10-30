@@ -493,9 +493,11 @@ def _getMetaFeatureFromJavaMethodInfo(javaMethodInfo):
   
 
 if orgVersion:
+  from org.modelio.api.diagram import IDiagramGraphic
   from org.modelio.api.diagram.dg import IDiagramDG
   from org.modelio.metamodel.diagrams import AbstractDiagram as ModelioAbstractDiagram
 else:
+  from com.modeliosoft.modelio.api.diagram import IDiagramGraphic
   from com.modeliosoft.modelio.api.diagram.dg import IDiagramDG
   from com.modeliosoft.modelio.api.model.diagrams import AbstractDiagram as ModelioAbstractDiagram
 
@@ -514,6 +516,14 @@ def getDisplayingDiagrams(element):
       selectedDiagrams.append(diagramHandle.getDiagram())
   return selectedDiagrams
 
+def getDiagramGraphics(element):
+  """ Return all diagram graphics (i.e. DiagramLink, DiagramNode) that are used
+      to display this element
+  """
+  diagramGraphics = []
+  for diagramHandle in ALL_DIAGRAM_HANDLES:
+    diagramGraphics.extend(diagramHandle.getDiagramGraphics(element))
+  return diagramGraphics  
   
 VIRTUAL_META_FEATURES = [
     ( "<<<getDiagramNode>>> (virtual)", 
@@ -525,6 +535,11 @@ VIRTUAL_META_FEATURES = [
       ModelioElement,
       getDisplayingDiagrams,
       ModelioAbstractDiagram,
+      True ),
+    ( "<<<getDiagramGraphics>>> (virtual)",
+      ModelioElement,
+      getDiagramGraphics,
+      IDiagramGraphic,
       True )
   ]
   
