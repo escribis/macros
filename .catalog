@@ -5,7 +5,7 @@
 <script name="AdvancedSearch" path="AdvancedSearch.py" icon-path="" show-menu="false" show-toolbar="true">
 <description></description>
 </script>
-<script name="CoExplorer" path="CoExplorer.py" icon-path="" show-menu="false" show-toolbar="true">
+<script name="CoExplorer" path="CoExplorer.py" icon-path="" show-menu="true" show-toolbar="true">
 <description></description>
 </script>
 <script name="GenerateProfile" path="generateprofile_modelio3.py" icon-path="" show-menu="false" show-toolbar="true">
@@ -14,5 +14,8 @@ It displays the complete description of a profile.
 It is applicable on ModuleComponents and Profiles</description>
 <metaclass name="ModuleComponent"></metaclass>
 <metaclass name="Profile"></metaclass>
+</script>
+<script name="SearchInDiagrams" path="find-element-in-diagram.py" icon-path="" show-menu="true" show-toolbar="true">
+<description>Open the diagrams that contains the element selected and print the name of these diagram in the script windows</description>
 </script>
 </catalog>
