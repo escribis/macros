@@ -17,26 +17,17 @@
 #      - basic functions
 #      - showInfo functions
 
-
-# check if this is modelio 3 because the API has changed
-try:
-  from org.modelio.api.modelio import Modelio
-  orgVersion = True
-except:
-  from com.modeliosoft.modelio.api.modelio import Modelio
-  orgVersion = False
-from org.eclipse.core.runtime import IAdaptable
-from misc import reject,excluding,exists,isEmpty,notEmpty,isList,forAll,isString
-from misc import HtmlWindow,TreeWindow
-from misc import getWebPage
-
+#-----------------------------------------------------------------------------------
+#   Interface
+#-----------------------------------------------------------------------------------
+# exported symbols for this module
 __all__ = [
   "getMetaclassFromName",
   "getNameFromMetaclass",
   "isMetaclass",
   "isEnumeration",
   "getNameFromType",
-  "getMetaclassImage",
+  "getImageFromType",
   "getMetaclassJavadocURL",
   "getMetaclassMetamodelURL",
   "getSubMetaclasses",
@@ -71,11 +62,33 @@ __all__ = [
   "getElementParents",
   "getElementPath",
   
+  "ImageProvider",
+  "ClassImageProvider",
+  "NAVIGATOR_IMAGE_PROVIDER", 
+  
   "show",
-  "elementTree",
+  "explore",
   
    
  ]
+ 
+ 
+
+#-----------------------------------------------------------------------------------
+#   Realisation
+#-----------------------------------------------------------------------------------
+# check if this is modelio 3 because the API has changed
+try:
+  from org.modelio.api.modelio import Modelio
+  orgVersion = True
+except:
+  from com.modeliosoft.modelio.api.modelio import Modelio
+  orgVersion = False
+from org.eclipse.core.runtime import IAdaptable
+from misc import reject,excluding,exists,isEmpty,notEmpty,isList,forAll,isString
+from misc import HtmlWindow,TreeWindow,ImageProvider
+from misc import getWebPage
+
 
 SPECIAL_FEATURES = [ 
   "toString","hashCode","compareTo","wait",
@@ -101,7 +114,7 @@ def _isPythonBuiltin(name):
 def getMetaclassFromName(metaclassname):
   """ get the Modelio Metaclass inheriting from ModelioElement and 
      corresponding to the given name of a metaclass.
-     Return null if the name provided is not the name of a metaclass 
+     Return None if the name provided is not the name of a metaclass 
   """
   return METAMODEL_SERVICE.getMetaclass(metaclassname)
 
@@ -112,7 +125,10 @@ def getNameFromMetaclass(metaclass):
   if issubclass(metaclass,ModelioElement):
     name = METAMODEL_SERVICE.getMetaclassName(metaclass)
   else:
-    name = unicode(metaclass.getCanonicalName())
+    try:
+      name = unicode(metaclass.getCanonicalName())
+    except:
+      name = metaclass.toString()
   return unicode(name)
 
 def isJavaClass(x):
@@ -133,7 +149,7 @@ def isEnumeration(x):
   except:
     return False  
   
-def getNameFromType(t):
+def getNameFromType(t,noPath=True):
   """ get name from a type, i.e. a metaclass or a basic type
   """
   if t is java.lang.String:
@@ -162,16 +178,87 @@ def getNameFromType(t):
               name = t.toString()
             except:
               name = "<unamed type>"
+  if noPath:
+    name = name.split('.')[-1]
   return unicode(name)
   
-def getMetaclassImage(metaclass):
+  
+#---- Extension of the Modelio' Image Service -----------------------
+# Modelio provide images only for subclass of element
+# Here we provide more images for other types.
+# This includes both basic types, but also graphics, etc.
+
+class ClassImageProvider(ImageProvider):
+  """ Provide some images for types.
+      We first try to check if there is an image corresponding exactly
+      to the name of the type (unqualified). If this is not the case then
+      the we search in a class root path in a sequential order. The first
+      class which is a superclass of return the image. That is, the types
+      given as a path should be from the most specific one, to the most
+      general one.
+  """
+  def __init__(self,resourcePath="",classSearchPath=[]):
+    ImageProvider.__init__(self,resourcePath)
+    # the order in which one will select the image. Contains a list of classes
+    self.classSearchPath = classSearchPath
+  def appendClassesToSearchPath(self,classes):
+    self.classSearchPath.append(classes)
+  def getImageFromType(self,classe):
+    # first try to get the image with the exact name of the type
+    image = self.getImageFromName(getNameFromType(classe,noPath=True))
+    if image is not None:
+      return image
+    else:
+      # not found, then search in the class root path 
+      for classroot in self.classSearchPath:
+        if issubclass(classe,classroot):
+          image = self.getImageFromName(getNameFromType(classroot,noPath=True))
+          if image is not None:
+            return image
+      return None
+  def getImageFromObject(self,object):
+    return self.getImageFromType(type(object))
+   
+# TODO: Other useful classes to consider 
+# LocalPropertyTable
+# MStatus
+# IStyle ?
+# StyleKey ?
+# FactoryStyle ?
+
+if orgVersion:
+  from org.modelio.api.diagram import IDiagramNode,IDiagramLink,ILinkPath
+  from org.modelio.api.diagram.style import IStyleHandle
+else:
+  from com.modeliosoft.modelio.api.diagram import IDiagramNode,IDiagramLink,ILinkPath
+  from com.modeliosoft.modelio.api.diagram.style import IStyleHandle
+from org.eclipse.draw2d.geometry import Rectangle, Dimension, Point
+from java.util import UUID
+
+CLASSES_SEARCH_ORDER = \
+  [ IDiagramNode,IDiagramLink,ILinkPath,
+    IStyleHandle, 
+    Rectangle, Dimension, Point,
+    UUID ]
+if orgVersion:
+  from org.modelio.vcore.smkernel.mapi import MClass, MAttribute, MDependency
+  CLASSES_SEARCH_ORDER.extend( [ MClass, MAttribute, MDependency ] )
+    
+NAVIGATOR_IMAGE_PROVIDER=ClassImageProvider(classSearchPath=CLASSES_SEARCH_ORDER) 
+  
+def getImageFromType(metaclass):
   """ return the image corresponding to a metaclass or None if no image is available
   """
   try:
     return Modelio.getInstance().getImageService().getMetaclassImage(metaclass)
   except:
-    return None
+    return NAVIGATOR_IMAGE_PROVIDER.getImageFromType(metaclass)
 
+
+    
+    
+    
+    
 MODELIO_VERSION = Modelio.getInstance().getContext().getVersion()
 MODELIO_DOC_URL_ROOT = "http://modelio.org/documentation"
 MODELIO_SIMPLE_VERSION = str(MODELIO_VERSION.getMajorVersion())+'.'+str(MODELIO_VERSION.getMinorVersion())
@@ -187,7 +274,6 @@ def getMetaclassJavadocURL(metaclass):
   """
   try:
     name = metaclass.getCanonicalName()
-    # print "name=",name,MODELIO_PACKAGES_PREFIX
     if name.startswith(MODELIO_PACKAGES_PREFIX):
       return MODELIO_JAVADOC_ROOT_URL+"/"+name.replace(".","/")+".html"
     else:
@@ -383,7 +469,7 @@ else:
   from com.modeliosoft.modelio.api.diagram.dg import IDiagramDG
 FUN_META_FEATURES = {
   "ClassDiagram" : [ \
-    ( "DIAGRAMNODE", \
+    ( "<<<getDiagramNode Virtual Feature>>>", \
       (lambda d:Modelio.getInstance(). \
                 getDiagramService().getDiagramHandle(d).getDiagramNode()), \
       IDiagramDG, \
@@ -402,9 +488,7 @@ def getMetaFeatures(metaclass,inherited=True,groupBySuper=False,additionalFun=[]
   metaclassname = getNameFromMetaclass(metaclass)
   if metaclassname in FUN_META_FEATURES:
     for featuredef in FUN_META_FEATURES[metaclassname]:
-      # print "def",featuredef
       (featurename,fun,returntype,multiplicity) = featuredef
-      # print "adding ",featurename," returns ",returntype
       metafeatures = metafeatures \
                      + [ FunMetaFeature(fun,metaclass,featurename,returntype,multiplicity)] 
   return metafeatures
@@ -447,8 +531,7 @@ class MetaclassInfo(object):
           mcbody = self.getBody(ftemplate=ftemplate,fsep=fsep,html=html))
     return unicode(s)
 
-# print getMetaclassInfo(IUseCase).getText( \
-#   fsep="\n",ftemplate="  $fname",mctemplate="class $mcsig {\n$mcbody\n}")  
+
 
 METACLASS_INFOS = dict()
 
@@ -545,13 +628,19 @@ def isElementList(x):
 
 
 def getElementId(element):
+  """ get the id of an element. Try various means to do that
+  """
   try:
-    s = u"ID("+unicode(element.getIdentifier())+u")"
+    # this should work on Modelio 2.x
+    s = unicode(element.getIdentifier())
   except:
     try:
-      s = unicode(element.getId())
-    except: 
-      s = u"id("+unicode(id(element))+u")"  
+      s = unicode(element.getUuid().toString())
+    except:  
+      try:
+        s = unicode(element.getId())
+      except: 
+        s = u"jythonId("+unicode(id(element))+u")"  
   return s
 
 from java.util import List as JavaList
@@ -879,35 +968,15 @@ def show(x,html=False):
   else:
     print x
 
-import os    
+
 from org.eclipse.swt.graphics import Color, Image
 from org.eclipse.swt.widgets import Display
-DEVICE = Display.getCurrent() # Modelio.getInstance().getImageService().getMetaclassImage(Package).getDevice()
-RESOURCE_PATH = os.path.join(os.path.dirname(__file__),'res')
+ 
 
-class NavigatorImageProvider(object):
-  def __init__(self,resourcePath):
-    self.imageMap = {}
-    for name in ["atomic","assoc-1","assoc-n","integer","int",
-                 "float","long","boolean","bool","string","unicode","enumeration",
-                 "IDiagramNode","IDiagramLink","ILinkPath","IStyleHandle", 
-                 "Rectangle","Dimension","Point"]:
-      self.imageMap[name] = Image(DEVICE,os.path.join(resourcePath,name+".gif"))
-  def getImage(self,name):
-    if name in self.imageMap:
-      return self.imageMap[name]
-    else:
-      return None    
-NAVIGATOR_IMAGE_PROVIDER=NavigatorImageProvider(RESOURCE_PATH)
 
-if orgVersion:
-  from org.modelio.api.diagram import IDiagramNode,IDiagramLink,ILinkPath
-  from org.modelio.api.diagram.style import IStyleHandle
-else:
-  from com.modeliosoft.modelio.api.diagram import IDiagramNode,IDiagramLink,ILinkPath
-  from com.modeliosoft.modelio.api.diagram.style import IStyleHandle
-from org.eclipse.draw2d.geometry import Rectangle, Dimension, Point
-def elementTree(x,emptySlots=False):
+
+
+def explore(x,emptySlots=False):
   def _getChildren(data):
     if isinstance(data,ElementInfo):
       return data.getSlotList(emptySlots=emptySlots)
@@ -944,35 +1013,18 @@ def elementTree(x,emptySlots=False):
   def _getImage(data):
     if isinstance(data,ElementInfo):
       metaclass = data.getMetaclass()
-      image = getMetaclassImage(metaclass)
-      if image is None:
-        print data.getMetaclass().getCanonicalName()
-        if issubclass(metaclass,IDiagramNode):
-          return NAVIGATOR_IMAGE_PROVIDER.getImage("IDiagramNode")
-        elif issubclass(metaclass,IDiagramLink):
-          return NAVIGATOR_IMAGE_PROVIDER.getImage("IDiagramLink")
-        elif issubclass(metaclass,ILinkPath):
-          return NAVIGATOR_IMAGE_PROVIDER.getImage("ILinkPath")
-        elif issubclass(metaclass,IStyleHandle):
-          return NAVIGATOR_IMAGE_PROVIDER.getImage("IStyleHandle")
-        elif issubclass(metaclass,Rectangle):
-          return NAVIGATOR_IMAGE_PROVIDER.getImage("Rectangle")
-        elif issubclass(metaclass,Dimension):
-          return NAVIGATOR_IMAGE_PROVIDER.getImage("Dimension")
-        elif issubclass(metaclass,Point):
-          return NAVIGATOR_IMAGE_PROVIDER.getImage("Point")
+      image = getImageFromType(metaclass)
       return image
     elif isinstance(data,MetaFeatureSlot):
       mv = data.getModelValue()
       if mv.isElement():
-        return NAVIGATOR_IMAGE_PROVIDER.getImage("assoc-1")
+        return NAVIGATOR_IMAGE_PROVIDER.getImageFromName("assoc-1")
       elif mv.isElementList():
-        return NAVIGATOR_IMAGE_PROVIDER.getImage("assoc-n")
+        return NAVIGATOR_IMAGE_PROVIDER.getImageFromName("assoc-n")
       elif mv.isScalar():
-        typename = getNameFromType(type(mv.getValue()))
-        return NAVIGATOR_IMAGE_PROVIDER.getImage(typename)
+        return getImageFromType(type(mv.getValue()))
       elif mv.isEnumerationLiteral():
-        return NAVIGATOR_IMAGE_PROVIDER.getImage("enumeration")
+        return NAVIGATOR_IMAGE_PROVIDER.getImageFromName("enumeration")
   def _getGrayed(data):
     if isinstance(data,ElementInfo):
       return False

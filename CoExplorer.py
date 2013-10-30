@@ -27,21 +27,15 @@ sys.path.append(SCRIPT_LIBRARY_PATH)
 
 #----- imports (reload in development mode)
 if DEVELOPEMENT_MODE:
-  try: 
-    del sys.modules["misc"]
-    del misc
-  except:
-    pass
+  try: del sys.modules["misc"] ; del misc
+  except: pass
 from misc import *
 
 if DEVELOPEMENT_MODE:
-  try: 
-    del sys.modules["introspection"]
-    del introspection
-  except:
-    pass
+  try: del sys.modules["introspection"] ; del introspection
+  except: pass
 from introspection import *
 
 
 #----- Do the job
-coexplorer = elementTree(selectedElements)
+coexplorer = explore(selectedElements)

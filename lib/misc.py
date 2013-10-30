@@ -2,6 +2,7 @@
 # misc
 #
 # Miscellaneous functions gathered here and waiting for some refactoring
+# This allows incremental development. This is necessary to avoid multiple reload import
 #
 # Licence: GPL
 # Author: jmfavre
@@ -127,6 +128,34 @@ from org.eclipse.swt import SWT
 from org.eclipse.swt.widgets import Shell,Display,Label,Button,Listener
 from org.eclipse.swt.browser import Browser
 from org.eclipse.swt.layout import GridData,GridLayout
+
+
+import os    
+from org.eclipse.swt.graphics import Color, Image
+from org.eclipse.swt.widgets import Display
+
+class ImageProvider(object):
+  """ provide some images for given name (extension is added)
+  """
+  def __init__(self,resourcePath="",extension=".gif"):
+    self.extension = extension
+    if resourcePath != "":
+      self.resourcePath = resourcePath
+    else:
+      self.resourcePath = os.path.join(os.path.dirname(__file__),'res')
+    # imageMap contains a mapping   name -> image|None 
+    # this mapping is built on demand
+    self.imageMap = {}
+  def getImageFromName(self,name):
+    if name not in self.imageMap:
+      try:
+        image = Image(Display.getCurrent(),os.path.join(self.resourcePath,name+self.extension))
+      except:
+        image = None
+      self.imageMap[name] = image
+    return self.imageMap[name]
+
+
 
 
 # see http://git.eclipse.org/c/platform/eclipse.platform.swt.git/tree/examples/org.eclipse.swt.snippets/src/org/eclipse/swt/snippets/Snippet128.java to improve this window with more feature
