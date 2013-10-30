@@ -115,15 +115,19 @@ def getMetaclassFromName(metaclassname):
   """
   return METAMODEL_SERVICE.getMetaclass(metaclassname)
 
+from java.lang import Class as JavaLangClass
+
 def getNameFromMetaclass(metaclass):
-  """ get the name of a metaclass  
+  """ get the name of a metaclass or a java class 
   """
   # TODO
   if issubclass(metaclass,ModelioElement):
     name = METAMODEL_SERVICE.getMetaclassName(metaclass)
-  else:
+  elif metaclass is JavaLangClass:
+    name = "java.lang.Class"
+  else: 
     name = unicode(metaclass.getCanonicalName())
-  return unicode(name)
+  return name
 
 def isJavaClass(x):
   return isinstance(x,java.lang.Class)
@@ -323,24 +327,41 @@ def getSubMetaclasses(metaclass):
 
 
 # FIXME does not work with Modelio 3.0
-# import inspect
+# if not orgVersion:
+#  import inspect
 import types
 def getSuperMetaclasses(metaclass,inclusive=True):
-  """ returns the list of superMetaclass from the parent to Element.
-      If inclusive=True includes the metaclass at the beginning
+  """ This function is intentend to be used primarily with Modelio java metaclass,
+      either implementation or interface, but in all cases that are below Element.
+      If inclusive=True includes the metaclass at the beginning.
+      This function is inte
   """
-  return [metaclass] if inclusive else []
-  # FIXME !!!!
+  metaclasses = [metaclass] if inclusive else []
+  print metaclass
+  if issubclass(metaclass,ModelioElement):
+    # for modelio classes, the algorithm below use the fact that until Element
+    # there is only one interface 
+    current = metaclass
+    finished = current is ModelioElement
+    while not finished:
+      superInterfaces = current.getInterfaces()
+      if len(superInterfaces) == 1:
+        current = superInterfaces[0]
+        metaclasses.append(current)
+      finished = len(superInterfaces) != 1 or current is ModelioElement
+  return metaclasses
+  # The code below was working for Modelio 2.x but not anymore for modelio because of
+  # problem importing some modules
   # ------------------------------------------
   # not executed
-  pythonClasses = inspect.getmro(metaclass)
-  javaInterfaces = filter( 
-                     lambda x:x.isInterface(),
-                     excluding(pythonClasses,types.ObjectType))
-  metaClasses = filter( 
-                lambda x:getNameFromMetaclass(x) is not None and x is not IAdaptable,
-                javaInterfaces)
-  return metaClasses if inclusive else metaClasses[1:]
+  # pythonClasses = inspect.getmro(metaclass)
+  # javaInterfaces = filter( 
+  #                   lambda x:x.isInterface(),
+  #                   excluding(pythonClasses,types.ObjectType))
+  # metaClasses = filter( 
+  #              lambda x:getNameFromMetaclass(x) is not None and x is not IAdaptable,
+  #              javaInterfaces)
+  # return metaClasses if inclusive else metaClasses[1:]
 
 
 # SPECIAL_FEATURES = [ 
@@ -358,8 +379,12 @@ def _getJavaMethods(javaclass,inherited=False,regexp=None,argTypes=None,methodFi
   """ returns java methods from a metaclass
       regexp : None or a regular expression to filter method names (e.g. "^get|is")
       methodFilterFun : None or a predicate on a java.lang.reflect.Method object that will be used to filter methods
-  """   
-  javaMethods = javaclass.getMethods() if inherited else javaclass.getDeclaredMethods()
+  """
+  try:  
+    javaMethods = javaclass.getMethods() if inherited else javaclass.getDeclaredMethods()
+  except:
+    # it seems that the code above fail in some case
+    javaMethods = []
   if not natives:
     # remove methods starting with _ which seems to be natives ones
     # (should be improved using getModifiers instead ...)
@@ -466,19 +491,23 @@ def _getMetaFeatureFromJavaMethodInfo(javaMethodInfo):
 
 if orgVersion:
   from org.modelio.api.diagram.dg import IDiagramDG
+  from org.modelio.metamodel.diagrams import AbstractDiagram as ModelioAbstractDiagram
 else:
   from com.modeliosoft.modelio.api.diagram.dg import IDiagramDG
-FUN_META_FEATURES = {
-  "ClassDiagram" : [ \
-    ( "<<<getDiagramNode Virtual Feature>>>", \
+  from com.modeliosoft.modelio.api.model.diagrams import AbstractDiagram as ModelioAbstractDiagram
+  
+VIRTUAL_META_FEATURES = [
+    ( "<<<getDiagramNode>>> (virtual feature)", 
+      ModelioAbstractDiagram,
       (lambda d:Modelio.getInstance(). \
-                getDiagramService().getDiagramHandle(d).getDiagramNode()), \
-      IDiagramDG, \
-      False ) ] }
+                getDiagramService().getDiagramHandle(d).getDiagramNode()), 
+      IDiagramDG, 
+      False )
+  ]
        
 def getMetaFeatures(metaclass,inherited=True,groupBySuper=False,methodFilterFun=None,additionalFun=[]):
   """ return the meta features of a metaclass, that is MetaFeature created
-      for methods getXXX() and isXXX() with no arguments
+      for methods getXXX(), isXXX() and toString() with no arguments
   """
   javaMethods = _getJavaMethods(metaclass,inherited=inherited,regexp='^get|is|toString',argTypes=[],methodFilterFun=methodFilterFun)
   # get the signaturex 
@@ -486,12 +515,12 @@ def getMetaFeatures(metaclass,inherited=True,groupBySuper=False,methodFilterFun=
   # in method info the parameters are indicated. Here we skip this as we know that
   # the methods do not have parameters.
   metafeatures = map( _getMetaFeatureFromJavaMethodInfo,javaMethodInfos)
-  metaclassname = getNameFromMetaclass(metaclass)
-  if metaclassname in FUN_META_FEATURES:
-    for featuredef in FUN_META_FEATURES[metaclassname]:
-      (featurename,fun,returntype,multiplicity) = featuredef
-      metafeatures = metafeatures \
-                     + [ FunMetaFeature(fun,metaclass,featurename,returntype,multiplicity)] 
+  # Add virtual thoes virtual meta features that match the given metaclass using subclasses
+  for vFeature in VIRTUAL_META_FEATURES:
+    (vFeatureName,vFeatureClass,vFeatureFun,vFeatureReturnType,vFeatureMultiplicity) = vFeature
+    if issubclass(metaclass,vFeatureClass):
+        metafeatures = metafeatures \
+                       + [ FunMetaFeature(vFeatureFun,vFeatureClass,vFeatureName,vFeatureReturnType,vFeatureMultiplicity)] 
   return metafeatures
 
 class MetaclassInfo(object):
@@ -929,7 +958,7 @@ class ElementInfo(object):
     return self.getSignature(True)
 
     
-ELEMENT_INFOS = dict()
+# ELEMENT_INFOS = dict()
 
 # def getElementInfo(element):
   # XXX TODO the idenfier was a good solution, fund anotuer one
