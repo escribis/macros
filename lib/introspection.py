@@ -402,14 +402,16 @@ def _getJavaMethods(javaclass,inherited=False,regexp=None,argTypes=None,methodFi
 
 import types
 from java.util import List as JavaUtilList
-from org.eclipse.emf.common.util import EList
 if orgVersion:
+  from org.eclipse.emf.common.util import EList
   from org.modelio.vcore.smkernel import SmList as ModelioList
 else:
   from com.modeliosoft.modelio.api.utils import ObList as ModelioList
 def isCollectionType(x):
   return x in LIST_TYPES  
-LIST_TYPES = [ModelioList,JavaUtilList,types.ListType, EList]    
+LIST_TYPES = [ModelioList,JavaUtilList,types.ListType]    
+if orgVersion:
+  LIST_TYPES.append(EList)
 
 def _getJavaMethodInfo(javaMethod):
   classe = javaMethod.getDeclaringClass()
@@ -503,7 +505,7 @@ if orgVersion:
 else:
   from com.modeliosoft.modelio.api.diagram import IDiagramGraphic
   from com.modeliosoft.modelio.api.diagram.dg import IDiagramDG
-  from com.modeliosoft.modelio.api.model.diagrams import AbstractDiagram as ModelioAbstractDiagram
+  from com.modeliosoft.modelio.api.model.diagrams import IAbstractDiagram as ModelioAbstractDiagram
 
 DIAGRAM_SERVICE = Modelio.getInstance().getDiagramService()
 ALL_DIAGRAMS = Modelio.getInstance().getModelingSession().findByClass(ModelioAbstractDiagram)
