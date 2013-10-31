@@ -75,9 +75,7 @@ else:
 SCRIPT_LIBRARY_DIRECTORY=os.path.join(MACROS_DIRECTORY,'lib')
 # Uncomment this line and adjust it if you want to put the "lib" directory somewhere else
 # SCRIPT_LIBRARY_DIRECTORY = "C:\\MODELIO3-WORKSPACE\\macros\\lib"
-print SCRIPT_LIBRARY_DIRECTORY
 sys.path.append(SCRIPT_LIBRARY_DIRECTORY)
-print sys.path
 
 
 
