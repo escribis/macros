@@ -43,6 +43,7 @@
 #             lib/
 #                 introspection.py
 #                 misc.py
+#                 modelioscriptor.py
 #                 ...                <--- possibly other jython modules
 #                 res/
 #                     assoc-1.gif
@@ -50,46 +51,91 @@
 #                     ...            <--- other resources.
 #
 # History
+#   Version 1.1 - December 02, 2013
+#      - addition of some explaination on startup
+#      - use modelioscriptor
+#      - changes in startup 
 #   Version 1.0 - October 31, 2013
 #      - first public realease
 
-DEVELOPEMENT_MODE = True
+# MODULES_TO_RELOAD = []
+MODULES_TO_RELOAD = [ "misc", "modelioscriptor", "introspection"  ]
 
-#---- add the "lib" directory to the path
-# The code below compute this path and put it in the variable SCRIPT_LIBRARY_DIRECTORY. 
-# Feel free to change it if necessary. Currently the "lib" directory is search within
-# the directory of this very file, but if you may want to change its location you can
-# uncomment the line defining SCRIPT_LIBRARY_DIRECTORY with an absolute path
+def startup():
+  print "The CoExplorer is starting ..."
+
+  #---- add the "lib" directory to the path
+  # The code below compute this path and put it in the variable SCRIPT_LIBRARY_DIRECTORY. 
+  # Feel free to change it if necessary. Currently the "lib" directory is search within
+  # the directory of this very file, but if you may want to change its location you can
+  # uncomment the line defining SCRIPT_LIBRARY_DIRECTORY with an absolute path
+  try:
+    from org.modelio.api.modelio import Modelio
+    orgVersion = True
+  except:
+    orgVersion = False
+  import os
+  import sys 
+  WORKSPACE_DIRECTORY=Modelio.getInstance().getContext().getWorkspacePath().toString()
+  if orgVersion:
+    MACROS_DIRECTORY=os.path.join(WORKSPACE_DIRECTORY,'macros')
+  else:
+    MACROS_DIRECTORY=os.path.join(WORKSPACE_DIRECTORY,'.config','macros')
+  SCRIPT_LIBRARY_DIRECTORY=os.path.join(MACROS_DIRECTORY,'lib')
+  # Uncomment this line and adjust it if you want to put the "lib" directory somewhere else
+  # SCRIPT_LIBRARY_DIRECTORY = "C:\\MODELIO3-WORKSPACE\\macros\\lib"
+  sys.path.extend([MACROS_DIRECTORY,SCRIPT_LIBRARY_DIRECTORY])
+  print "   Current workspace is "+WORKSPACE_DIRECTORY
+  print "   "+MACROS_DIRECTORY+" added to script path"
+  print "   "+SCRIPT_LIBRARY_DIRECTORY+" added to script path"
+
+  
+def displayInitialMessage():
+  print
+  print "The CoExplorer has been launched in a new window with selectedElements"
+  print "You can at any time use the function explore(...elements...) in this script window"
+  print
+  print "Try for instance the following:"
+  print "explore(allInstances(Package))        --> explore all packages"
+  print "explore(allDiagrams())                --> explore all diagrams"
+  print "explore(allMClasses())                --> explore the metamodel"
+
+
+#---- check if this is the first time this macro is loaded or not  
 try:
-  from org.modelio.api.modelio import Modelio
-  orgVersion = True
+  CO_EXPLORER_EXECUTION += 1
+  # this is the not the first time
 except:
-  orgVersion = False
-import os
-import sys 
-WORKSPACE_DIRECTORY=Modelio.getInstance().getContext().getWorkspacePath().toString()
-if orgVersion:
-  MACROS_DIRECTORY=os.path.join(WORKSPACE_DIRECTORY,'macros')
-else:
-  MACROS_DIRECTORY=os.path.join(WORKSPACE_DIRECTORY,'.config','macros')
-SCRIPT_LIBRARY_DIRECTORY=os.path.join(MACROS_DIRECTORY,'lib')
-# Uncomment this line and adjust it if you want to put the "lib" directory somewhere else
-# SCRIPT_LIBRARY_DIRECTORY = "C:\\MODELIO3-WORKSPACE\\macros\\lib"
-sys.path.append(SCRIPT_LIBRARY_DIRECTORY)
+  # this is the first time
+  CO_EXPLORER_EXECUTION = 1
+  startup()
+    
 
-
-
-#----- imports (reload in development mode)
-if DEVELOPEMENT_MODE:
+#----- reload and imports the modules (see the variable at the end of script)
+if "misc" in MODULES_TO_RELOAD:
   try: del sys.modules["misc"] ; del misc
   except: pass
 from misc import *
 
-if DEVELOPEMENT_MODE:
+if "modelioscriptor" in MODULES_TO_RELOAD:
+  try: del sys.modules["modelioscriptor"] ; del modelioscriptor
+  except: pass
+from modelioscriptor import *
+
+if "introspection" in MODULES_TO_RELOAD:
   try: del sys.modules["introspection"] ; del introspection
   except: pass
 from introspection import *
 
 
-#----- Do the job
+
+#----- Launch a new co-explorer window
+n = len(selectedElements)
+print
+print "explore(selectedElements)     #",n,"element",("" if n<=1 else "s")
 coexplorer = explore(selectedElements)
+
+if CO_EXPLORER_EXECUTION==1:
+  displayInitialMessage()
+
+
