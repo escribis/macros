@@ -160,7 +160,7 @@ class ImageProvider(object):
 
 # see http://git.eclipse.org/c/platform/eclipse.platform.swt.git/tree/examples/org.eclipse.swt.snippets/src/org/eclipse/swt/snippets/Snippet128.java to improve this window with more feature
 class HtmlWindow(object):
-  def __init__(self, url=None, html=None,title="information",width=420,height=800,labeltext="This is a window"):      
+  def __init__(self, url=None, html=None,title="information",width=800,height=800,labeltext=""):      
     parent = Display.getDefault().getActiveShell()
     self.window = Shell(parent, SWT.CLOSE | SWT.RESIZE)
     # give minimum size, location and size
@@ -212,8 +212,8 @@ class HtmlWindow(object):
     self.okButton = button
   def _listenSelection(self):
     thebrowser = self.browser
-    from com.modeliosoft.modelio.api.modelio import Modelio
-    from com.modeliosoft.modelio.api.app.navigation import INavigationListener
+    from org.modelio.api.modelio import Modelio
+    from org.modelio.api.app.navigation import INavigationListener
     class SelectionListener(INavigationListener):
       #def navigateTo(self):
       #  thebrowser.setText("selection is "+str(target.getName()))
@@ -224,6 +224,8 @@ class HtmlWindow(object):
       "<html><header></header><body>" + html + "</body></html>")
   def setURL(self,url):
     self.browser.setUrl(url)
+  def setLabel(self,text):
+    self.label.setText(text)
   
 
   
@@ -237,7 +239,8 @@ from org.eclipse.swt.widgets import Tree,TreeItem
 class TreeWindow(object):
   def __init__(self,rootDataObjects,getChildrenFun,isLeafFun,
                 getImageFun=None,getTextFun=None,title="Explorer",
-                getGrayedFun=None,getBackgroundFun=None,getForegroundFun=None
+                getGrayedFun=None,getBackgroundFun=None,getForegroundFun=None,
+                onSelectionFun=None
               ):
               
     def _addRootDataObjects():
@@ -304,8 +307,8 @@ class TreeWindow(object):
         node = event.item
         # print "item selected",node,type(node)
         # print "details",event.detail
-        
-
+        if onSelectionFun is not None:
+          onSelectionFun(node.getData())        
         
     parentShell = Display.getDefault().getActiveShell()
     self.window = Shell(parentShell, SWT.CLOSE | SWT.RESIZE)
