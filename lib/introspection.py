@@ -9,6 +9,9 @@
 #
 # 
 # History
+#   Version 1.1 - December 03, 2013
+#      - support for "metamodel" and "javadoc" browsing
+#      - explore(element,browser=True)
 #   Version 0.5 - October 30, 2013
 #      - icons for Modelio 3' metamodel elements
 #      - refactoring
@@ -1053,7 +1056,11 @@ from org.eclipse.swt.widgets import Display
 
 
 
-def explore(x,emptySlots=False):
+def explore(x,browser=False,emptySlots=False):
+  if browser:
+    metamodelHtmlWindow = HtmlWindow(title="Modelio Metamodel Guide")
+    javadocHtmlWindow = HtmlWindow(title="Modelio API Javadoc")
+
   def _getChildren(data):
     if isinstance(data,ElementInfo):
       return data.getSlotList(emptySlots=emptySlots)
@@ -1116,12 +1123,28 @@ def explore(x,emptySlots=False):
         return Color(Display.getCurrent(),0,100,0)
       else:
         return Color(Display.getCurrent(),0,180,0)      
+  def onSelection(data):
+    if isinstance(data,ElementInfo):
+      metaclass = data.getMetaclass()
+      message = str(data)
+      metamodelHtmlWindow.setLabel(message)
+      javadocHtmlWindow.setLabel(message)
+      if issubclass(metaclass,ModelioElement):
+        metamodelHtmlWindow.setURL(getMetaclassMetamodelURL(metaclass))
+        javadocHtmlWindow.setURL(getMetaclassJavadocURL(metaclass))
+      else:
+        metamodelHtmlWindow.setText("")
+        javadocHtmlWindow.setText("")
+    elif isinstance(data,MetaFeatureSlot):
+      mv = data.getModelValue()
+      print "slot selected with model value:",mv
   if not isList(x):
     x = [x]
   TreeWindow(map(getElementInfo,x),_getChildren,_isLeaf, \
                  getTextFun=_getText,getImageFun=_getImage, \
                  getGrayedFun=_getGrayed, \
                  getForegroundFun=_getForeground,
+                 onSelectionFun=onSelection if browser else None,
                  title = "Model/Metamodel CoExplorer")
 
 #----------------------------------------
