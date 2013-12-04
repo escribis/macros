@@ -94,10 +94,11 @@ def displayInitialMessage():
   print
   print "The CoExplorer has been launched in a new window with selectedElements"
   print "You can at any time use the function explore(...elements...) in this script window"
+  print "Using 'exp' instead of 'explore' allows to browse the metamodel and javadoc"
   print
   print "Try for instance the following:"
-  print "explore(allInstances(Package))        --> explore all packages"
-  print "explore(allDiagrams())                --> explore all diagrams"
+  print "exp(allInstances(Package))            --> explore all packages"
+  print "exp(allDiagrams())                    --> explore all diagrams"
   print "explore(allMClasses())                --> explore the metamodel"
 
 

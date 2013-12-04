@@ -9,6 +9,8 @@
 #
 # 
 # History
+#   Version 1.2 - December 04, 2013
+#      - addition of a function "exp" as a shortcut to explore with html
 #   Version 1.1 - December 03, 2013
 #      - support for "metamodel" and "javadoc" browsing
 #      - explore(element,browser=True)
@@ -78,6 +80,7 @@ __all__ = [
   
   "show",
   "explore",
+  "exp"
   
    
  ]
@@ -1148,6 +1151,10 @@ def explore(x,browser=False,emptySlots=False):
                  title = "Model/Metamodel CoExplorer")
 
 #----------------------------------------
+
+def exp(x,emptySlots=False):
+  explore(x,True,emptySlots)
+
 
 NAVIGATION_SERVICE = Modelio.getInstance().getNavigationService()
 def navigateToElement(element):
