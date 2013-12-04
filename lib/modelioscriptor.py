@@ -9,6 +9,11 @@
 # Compatibility: Modelio 3.x
 # 
 # History
+#   Version 1.0 - December 04, 2013
+#      - functions M1 <--> M2
+#      - function theMClass renamed to getMClass
+#      - function with MJavaInterface in their name renamed to MInterface
+#      - first delivery for a university course
 #   Version 0.3 - December 02, 2013
 #      - functions for root elements
 #      - functions for edition services 
@@ -25,10 +30,13 @@
 #
 #
 
-from org.modelio.api.modelio             import Modelio
-from org.modelio.metamodel               import Metamodel
-from org.modelio.metamodel.analyst       import *
-from org.modelio.metamodel.mda           import *
+from java.lang                                    import Class as JavaClass
+from org.modelio.api.modelio                      import Modelio
+from org.modelio.metamodel                        import Metamodel
+from org.modelio.metamodel.uml.infrastructure     import Element
+from org.modelio.vcore.smkernel.mapi              import MClass
+from org.modelio.metamodel.analyst                import *
+from org.modelio.metamodel.mda                    import *
 
 
 def theSession():
@@ -46,13 +54,17 @@ def allInstances(classe):
   """ Return the list of all instances of a given metaclass (or submetaclass)
       for the given session. This includes not only the current project
       but also libraries such as predefined types.
-      (MClass|Class) -> List(MObject) 
+      (MClass|Class|String) -> List(MObject) 
       EXAMPLES:  
         allInstances(UseCase)      # return all UseCase
         allInstances(Element)      # return all Elements
+        allInstances("UseCase")    # return all UseCase
   """
-  return theSession().findByClass(classe)
-  
+  if isinstance(classe,basestring):
+    return allInstances(getMClass(classe))
+  else:
+    return theSession().findByClass(classe)
+
 def selectedInstances(classe,att,val):
   """ Return the list of all the instances that have the 
       property set to the given value. 
@@ -161,7 +173,7 @@ def allMClasses():
   return SmClass.getRegisteredClasses()
 
   
-def allMJavaInterfaces():
+def allMInterfaces():
   """ Return the list of all known metaclasses as Java interfaces.
       () -> [ Class ]
       EXAMPLE:
@@ -169,22 +181,65 @@ def allMJavaInterfaces():
   """
   return map(Metamodel.getJavaInterface,allMClasses())
 
-def theMClass(nameOrInterface):
-  """ Return the MClass with the given name or for the corresponding interface
-      (Class | String) -> MClass
+def getMClass(nameOrMInterfaceOrElement):
+  """ Return the MClass corresponding to a name, a java interface
+      or an element.
+      (Class | String | Element) -> MClass
       EXAMPLES:
-        print theMClass(UseCase)
-        print theMClass("UseCase")
+        print getMClass(UseCase)
+        print getMClass("UseCase")
+        print getMClass(myUseCase1)
   """
-  return Metamodel.getMClass(nameOrInterface)
+  if isinstance(nameOrMInterfaceOrElement,Element):
+    return nameOrMInterfaceOrElement.getMClass()
+  else:
+    return Metamodel.getMClass(nameOrMInterfaceOrElement)
+  
+def getMInterface(nameOrMClassOrElement):
+  """ Return the Java Interface corresponding to a name or a MClass
+      (MClass | String) -> CLass
+      EXAMPLES
+        print getMInterface("UseCase")
+        print getMInterface(getMClass("UseCase"))
+        print getMInterface(instanceNamed(DataType,"string"))
+  """
+  if isinstance(nameOrMClassOrElement,Element):
+    return nameOrMClassOrElement.getMClass().getJavaInterface()
+  elif isinstance(nameOrMClassOrElement,basestring):
+    return getMClass(nameOrMClassOrElement).getJavaInterface()
+  else:
+    return nameOrMClassOrElement.getJavaInterface()
+  
   
 def theMetamodelExtensions():
   """ TODO, Warning this is not a list!
   """
   return theSession().getMetamodelExtensions()  
   
+
+def isKindOf(element,mclassOrMInterface):
+  """ Check if the element is a direct  or indirect instance of a MClass 
+      or inteface. Use isTypeOf to test if the type is exactly
+      the one specified.
+      EXAMPLES
+        print isKindOf(instanceNamed(DataType,"string"),Element)
+        print isKindOf(instanceNamed(DataType,"string"),UseCase)
+  """
+  if isinstance(mclassOrMInterface,MClass):
+    mclassOrMInterface = mclassOrMInterface.getJavaInterface()
+  return isinstance(element,mclassOrMInterface)
   
-  
+def isTypeOf(element,mclassOrMInterface):
+  """ Check if the element has exactly the type specified, not one of
+      its subtype. Use isKindOf to test if the type is exactly the one 
+      specified.
+      EXAMPLES
+        print isTypeOf(instanceNamed(DataType,"string"),DataType)
+        print isTypeOf(instanceNamed(DataType,"string"),Element)
+  """
+  if isinstance(mclassOrMInterface,JavaClass):
+    mclassOrMInterface = Metamodel.getMClass(mclassOrMInterface)
+  return element.getMClass() is mclassOrMInterface
   
 #----------------------------------------------------------------------------
 #   Access to diagram graphics
@@ -294,18 +349,6 @@ def setSelection(elementOrElements):
   Modelio.getInstance().getNavigationService().fireNavigate(elementOrElements)
   
 
-if False:
-  print len(allInstances(Element))
-  print len(selectedInstances(UseCase,"Name","a"))
-  print theUMLRootPackage().getName()
-  print instanceNamed(DataType,"string")
-  print theUMLProject()
-  print theAnalystProject()
-  print theLocalModule()
-  print theUMLFactory()
-  print theAnalystFactory()
-  print len(allMClasses())
-  print len(allMJavaInterfaces())
-  print theMClass(UseCase)
+
   
 print "module modelioscriptor loaded from",__file__
