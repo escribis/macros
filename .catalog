@@ -8,7 +8,7 @@
 <script name="CoExplorer" path="CoExplorer.py" icon-path="" show-menu="true" show-toolbar="true">
 <description></description>
 </script>
-<script name="GenerateProfile" path="generateprofile_modelio3.py" icon-path="" show-menu="false" show-toolbar="true">
+<script name="GenerateProfile" path="generateprofile_modelio3.py" icon-path="" show-menu="true" show-toolbar="true">
 <description>This script generates a part of the 'module.xml' file used for the module development.
 It displays the complete description of a profile.
 It is applicable on ModuleComponents and Profiles</description>
@@ -17,5 +17,8 @@ It is applicable on ModuleComponents and Profiles</description>
 </script>
 <script name="SearchInDiagrams" path="find-element-in-diagram.py" icon-path="" show-menu="true" show-toolbar="true">
 <description>Open the diagrams that contains the element selected and print the name of these diagram in the script windows</description>
+</script>
+<script name="x" path="generateprofile.py" icon-path="" show-menu="false" show-toolbar="false">
+<description></description>
 </script>
 </catalog>
